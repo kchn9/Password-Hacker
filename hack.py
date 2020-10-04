@@ -65,7 +65,7 @@ def main():
     args = parser.parse_args()
 
     password_hacker = PasswordHacker(args.ip_address, args.port)
-    result = password_hacker.dictionary_brute_force('C:\\Users\\matku\\Desktop\\passwords.txt')
+    result = password_hacker.dictionary_brute_force('X:\\xxxx\\xxxx\\xxxx\\passwords.txt')
 
     if result == None:
         print('-> Password not found <-')
